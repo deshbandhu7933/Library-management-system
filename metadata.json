@@ -1,0 +1,8 @@
+{
+  "name": "Remix Library Management System",
+  "description": "A comprehensive, responsive Library Management System for students and librarians featuring real-time books catalog, secure authentication, borrowing, reservations, fine calculation, and analytics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
