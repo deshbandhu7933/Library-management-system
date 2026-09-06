@@ -15,7 +15,8 @@ import {
 import { 
   Users, BookOpen, Clock, ShieldCheck, Heart, AlertCircle, 
   Trash2, Edit, Check, ShieldAlert, Sparkles, Plus, Search, 
-  DollarSign, Mail, ListCollapse, MessageSquare, Printer, Download 
+  DollarSign, Mail, ListCollapse, MessageSquare, Printer, Download,
+  X, RotateCw, ExternalLink, CheckCircle2, ArrowRight
 } from 'lucide-react';
 import ReportExport from './ReportExport.tsx';
 
@@ -47,6 +48,8 @@ interface AdminDashboardProps {
   onCancelReservation: (resId: number) => Promise<void>;
   onWaiveFine: (fineId: number) => Promise<void>;
   onCollectFine: (fineId: number) => Promise<void>;
+  onDeleteBorrow?: (borrowId: number) => Promise<void>;
+  onClearHistory?: () => Promise<void>;
   
   toast: (msg: string, type?: 'success' | 'error') => void;
 }
@@ -54,10 +57,50 @@ interface AdminDashboardProps {
 export default function AdminDashboard({
   books, authors, categories, publishers, members, borrows, reservations, fines, messages, logs,
   onSaveBook, onDeleteBook, onSaveAuthor, onDeleteAuthor, onSaveCategory, onDeleteCategory,
-  onToggleUserStatus, onDeleteUser, onIssueBook, onReturnBook, onRenewLoan, onCancelReservation, onWaiveFine, onCollectFine, toast
+  onToggleUserStatus, onDeleteUser, onIssueBook, onReturnBook, onRenewLoan, onCancelReservation, onWaiveFine, onCollectFine,
+  onDeleteBorrow, onClearHistory, toast
 }: AdminDashboardProps) {
 
   const [activeTab, setActiveTab] = useState<'analytics' | 'books' | 'descriptors' | 'members' | 'loans' | 'reservations' | 'fines' | 'messages' | 'logs'>('analytics');
+  
+  // Deletion modals state
+  const [bookToDelete, setBookToDelete] = useState<Book | null>(null);
+  const [borrowToDelete, setBorrowToDelete] = useState<BorrowRecord | null>(null);
+  const [showClearHistoryModal, setShowClearHistoryModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const confirmDeleteBook = async () => {
+    if (!bookToDelete) return;
+    setIsDeleting(true);
+    try {
+      await onDeleteBook(bookToDelete.id);
+      setBookToDelete(null);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const confirmDeleteBorrow = async () => {
+    if (!borrowToDelete || !onDeleteBorrow) return;
+    setIsDeleting(true);
+    try {
+      await onDeleteBorrow(borrowToDelete.id);
+      setBorrowToDelete(null);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const confirmClearHistory = async () => {
+    if (!onClearHistory) return;
+    setIsDeleting(true);
+    try {
+      await onClearHistory();
+      setShowClearHistoryModal(false);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
   
   // Search state inside tables
   const [searchQuery, setSearchQuery] = useState('');
@@ -71,6 +114,9 @@ export default function AdminDashboard({
   const [issueEmail, setIssueEmail] = useState('');
   const [issueBookId, setIssueBookId] = useState('');
   const [issueLoading, setIssueLoading] = useState(false);
+
+  // Modal to inspect who has borrowed a specific book
+  const [selectedBookForBorrowers, setSelectedBookForBorrowers] = useState<Book | null>(null);
 
   // CRUD triggers passed upwards
   const [editingBook, setEditingBook] = useState<Book | null>(null);
@@ -173,9 +219,20 @@ export default function AdminDashboard({
 
   // 1. Export Loans Catalog to CSV
   const handleExportLoans = () => {
-    let csv = 'Loan ID,User Name,User Email,Book Title,Book Author,Borrow Date,Due Date,Return Date,Status,Renewals,Fine Overdue ($)\n';
+    let csv = 'Loan ID,User Name,User Email,Book Title,Book Author,Borrow Date,Due Date,Return Date,Days Remaining / Overdue,Status,Renewals,Fine Overdue ($)\n';
     borrows.forEach(b => {
-      csv += `"${b.id}","${b.userName}","${b.userEmail}","${b.bookTitle}","${b.bookAuthor}","${b.borrowDate}","${b.dueDate}","${b.returnDate || 'N/A'}","${b.status}","${b.renewalsCount}","${b.fineAmount.toFixed(2)}"\n`;
+      const daysRem = (() => {
+        if (b.status === 'returned') return 'Returned';
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        const dueDate = new Date(b.dueDate);
+        dueDate.setHours(0,0,0,0);
+        const diffTime = dueDate.getTime() - today.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        if (diffDays < 0) return `Overdue (${Math.abs(diffDays)} days)`;
+        return `${diffDays} days left`;
+      })();
+      csv += `"${b.id}","${b.userName}","${b.userEmail}","${b.bookTitle}","${b.bookAuthor}","${b.borrowDate}","${b.dueDate}","${b.returnDate || 'N/A'}","${daysRem}","${b.status}","${b.renewalsCount}","${b.fineAmount.toFixed(2)}"\n`;
     });
     downloadCSV(csv, `library-borrow-records-${new Date().toISOString().split('T')[0]}.csv`);
     toast('Borrowing records exported successfully!', 'success');
@@ -277,8 +334,15 @@ export default function AdminDashboard({
             className={`w-full px-4 py-2.5 rounded-xl text-xs font-bold text-left flex items-center justify-between transition-colors cursor-pointer ${
               activeTab === 'loans' ? 'bg-blue-50 text-blue-600' : 'text-slate-600 hover:bg-slate-50'
             }`}
+            id="admin-issuance-ledger-tab-btn"
           >
-            <span>Issuance Ledger</span>
+            <div className="flex items-center space-x-2">
+              <Clock className="h-4 w-4" />
+              <span>Issuance Ledger</span>
+            </div>
+            <span className="px-2 py-0.5 bg-slate-100 text-slate-700 text-[10px] rounded-md font-extrabold">
+              {borrows.filter(b => b.status !== 'returned').length} Active
+            </span>
           </button>
 
           <button 
@@ -431,14 +495,48 @@ export default function AdminDashboard({
                         </td>
                         <td className="p-3.5 font-mono text-[10px] text-slate-500">{b.isbn}</td>
                         <td className="p-3.5 font-mono text-[10px] text-slate-500 uppercase">{b.shelfNumber || 'N/A'}</td>
-                        <td className="p-3.5 text-center font-bold">
-                          <span className={`px-2 py-0.5 rounded-full ${b.availableQuantity > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
-                            {b.availableQuantity} / {b.quantity}
-                          </span>
+                        <td className="p-3.5 text-center">
+                          <div className="flex flex-col items-center gap-1">
+                            <span className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] ${
+                              b.availableQuantity > 0 
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60' 
+                                : 'bg-rose-50 text-rose-700 border border-rose-200/60'
+                            }`}>
+                              {b.availableQuantity} / {b.quantity} Left
+                            </span>
+                            {b.quantity - b.availableQuantity > 0 ? (
+                              <button 
+                                type="button"
+                                onClick={() => setSelectedBookForBorrowers(b)}
+                                className="inline-flex items-center space-x-1 text-[10px] font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded-full border border-blue-200 transition-colors cursor-pointer"
+                                title="Click to view who has borrowed this book"
+                              >
+                                <Users className="h-2.5 w-2.5" />
+                                <span>{b.quantity - b.availableQuantity} Borrowed</span>
+                              </button>
+                            ) : (
+                              <span className="text-[9px] text-slate-400 font-medium">All Available</span>
+                            )}
+                          </div>
                         </td>
                         <td className="p-3.5 text-right space-x-1.5">
+                          <button 
+                            type="button"
+                            onClick={() => setSelectedBookForBorrowers(b)} 
+                            className="p-1.5 hover:bg-blue-50 rounded-lg text-blue-600 transition-colors cursor-pointer inline-block" 
+                            title="View Who Has Borrowed This Book"
+                          >
+                            <Users className="h-3.5 w-3.5" />
+                          </button>
                           <button onClick={() => onSaveBook(b)} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors cursor-pointer inline-block" title="Edit Book"><Edit className="h-3.5 w-3.5" /></button>
-                          <button onClick={() => onDeleteBook(b.id)} className="p-1.5 hover:bg-rose-50 rounded-lg text-rose-600 transition-colors cursor-pointer inline-block" title="Delete Book"><Trash2 className="h-3.5 w-3.5" /></button>
+                          <button 
+                            type="button" 
+                            onClick={() => setBookToDelete(b)} 
+                            className="p-1.5 hover:bg-rose-50 rounded-lg text-rose-600 transition-colors cursor-pointer inline-block" 
+                            title="Delete Book & Associated History"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -629,8 +727,10 @@ export default function AdminDashboard({
                 if (query) {
                   const idMatch = b.id.toString().includes(query);
                   const nameMatch = b.userName.toLowerCase().includes(query);
+                  const emailMatch = b.userEmail ? b.userEmail.toLowerCase().includes(query) : false;
                   const titleMatch = b.bookTitle.toLowerCase().includes(query);
-                  if (!idMatch && !nameMatch && !titleMatch) return false;
+                  const authorMatch = b.bookAuthor ? b.bookAuthor.toLowerCase().includes(query) : false;
+                  if (!idMatch && !nameMatch && !emailMatch && !titleMatch && !authorMatch) return false;
                 }
 
                 // Filter match
@@ -780,17 +880,99 @@ export default function AdminDashboard({
                     </button>
                   </div>
 
+                  {/* Quick Status Filter Pills */}
+                  <div className="flex flex-wrap items-center gap-2 pt-1 pb-1">
+                    <button
+                      type="button"
+                      onClick={() => setLoansFilter('all')}
+                      className={`px-3 py-1 rounded-full text-xs font-bold transition-colors cursor-pointer ${
+                        loansFilter === 'all' 
+                          ? 'bg-slate-900 text-white shadow-sm' 
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      All Records ({borrows.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLoansFilter('borrowed')}
+                      className={`px-3 py-1 rounded-full text-xs font-bold transition-colors cursor-pointer ${
+                        loansFilter === 'borrowed' 
+                          ? 'bg-blue-600 text-white shadow-sm' 
+                          : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+                      }`}
+                    >
+                      Borrowed / Active ({borrows.filter(b => b.status === 'borrowed' || b.status === 'renewed' || b.status === 'overdue').length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLoansFilter('overdue')}
+                      className={`px-3 py-1 rounded-full text-xs font-bold transition-colors cursor-pointer ${
+                        loansFilter === 'overdue' 
+                          ? 'bg-rose-600 text-white shadow-sm' 
+                          : 'bg-rose-50 text-rose-700 hover:bg-rose-100'
+                      }`}
+                    >
+                      Overdue ({borrows.filter(b => b.status === 'overdue').length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLoansFilter('due_today')}
+                      className={`px-3 py-1 rounded-full text-xs font-bold transition-colors cursor-pointer ${
+                        loansFilter === 'due_today' 
+                          ? 'bg-amber-600 text-white shadow-sm' 
+                          : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+                      }`}
+                    >
+                      Due Today ({borrows.filter(b => b.status !== 'returned' && b.dueDate === todayStr).length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLoansFilter('returned')}
+                      className={`px-3 py-1 rounded-full text-xs font-bold transition-colors cursor-pointer ${
+                        loansFilter === 'returned' 
+                          ? 'bg-emerald-600 text-white shadow-sm' 
+                          : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                      }`}
+                    >
+                      Returned ({borrows.filter(b => b.status === 'returned').length})
+                    </button>
+                    {onClearHistory && borrows.some(b => b.status === 'returned') && (
+                      <button
+                        type="button"
+                        onClick={() => setShowClearHistoryModal(true)}
+                        className="ml-auto inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 transition-colors cursor-pointer"
+                        title="Purge all completed/returned borrowing records"
+                      >
+                        <Trash2 className="h-3 w-3 text-rose-600" />
+                        <span>Purge Returned History ({borrows.filter(b => b.status === 'returned').length})</span>
+                      </button>
+                    )}
+                  </div>
+
                   {/* Search, Filter, & Sort Panel */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="space-y-1">
                       <label className="text-[9px] font-bold text-slate-400 uppercase">Search Records</label>
-                      <input 
-                        type="text" 
-                        value={loansSearch}
-                        onChange={e => setLoansSearch(e.target.value)}
-                        className="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
-                        placeholder="Search Name, Book or ID..."
-                      />
+                      <div className="relative">
+                        <input 
+                          type="text" 
+                          value={loansSearch}
+                          onChange={e => setLoansSearch(e.target.value)}
+                          className="w-full border border-slate-200 rounded-xl pl-8 pr-8 py-2 text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
+                          placeholder="Search by Book Title, Member Name, or ID..."
+                        />
+                        <Search className="h-3.5 w-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+                        {loansSearch && (
+                          <button 
+                            type="button" 
+                            onClick={() => setLoansSearch('')} 
+                            className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <div className="space-y-1">
                       <label className="text-[9px] font-bold text-slate-400 uppercase">Filter by Status</label>
@@ -799,11 +981,11 @@ export default function AdminDashboard({
                         onChange={e => setLoansFilter(e.target.value as any)}
                         className="w-full border border-slate-200 bg-white rounded-xl px-3.5 py-2 text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
                       >
-                        <option value="all">All Records</option>
-                        <option value="borrowed">Borrowed / Active</option>
-                        <option value="returned">Returned</option>
-                        <option value="overdue">Overdue</option>
-                        <option value="due_today">Due Today</option>
+                        <option value="all">All Records ({borrows.length})</option>
+                        <option value="borrowed">Borrowed / Active ({borrows.filter(b => b.status === 'borrowed' || b.status === 'renewed' || b.status === 'overdue').length})</option>
+                        <option value="returned">Returned ({borrows.filter(b => b.status === 'returned').length})</option>
+                        <option value="overdue">Overdue ({borrows.filter(b => b.status === 'overdue').length})</option>
+                        <option value="due_today">Due Today ({borrows.filter(b => b.status !== 'returned' && b.dueDate === todayStr).length})</option>
                         <option value="no_fine">No Fine</option>
                         <option value="fine_pending">Fine Pending</option>
                       </select>
@@ -896,29 +1078,41 @@ export default function AdminDashboard({
                                     {b.status}
                                   </span>
                                 </td>
-                                <td className="p-3.5 text-right space-x-1">
-                                  {b.status !== 'returned' ? (
-                                    <div className="flex justify-end gap-1">
+                                <td className="p-3.5 text-right">
+                                  <div className="flex items-center justify-end gap-1.5">
+                                    {b.status !== 'returned' ? (
+                                      <>
+                                        <button 
+                                          onClick={() => handleReturn(b.id)}
+                                          className="inline-flex items-center space-x-1 px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] rounded-lg transition-colors cursor-pointer"
+                                          title="Check In / Return Book"
+                                        >
+                                          <CheckCircle2 className="h-3 w-3" />
+                                          <span>Check In / Return</span>
+                                        </button>
+                                        <button 
+                                          onClick={() => handleRenew(b.id)}
+                                          className="inline-flex items-center space-x-1 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-900 text-white font-bold text-[10px] rounded-lg transition-colors cursor-pointer"
+                                          title="Renew Loan (Extend Due Date)"
+                                        >
+                                          <RotateCw className="h-3 w-3" />
+                                          <span>Renew</span>
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <span className="text-slate-400 font-semibold italic text-[10px] mr-1">Settled</span>
+                                    )}
+                                    {onDeleteBorrow && (
                                       <button 
-                                        onClick={() => {
-                                          if (window.confirm("Are you sure you want to return this book?")) {
-                                            handleReturn(b.id);
-                                          }
-                                        }}
-                                        className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] rounded-lg transition-colors cursor-pointer"
+                                        type="button"
+                                        onClick={() => setBorrowToDelete(b)}
+                                        className="p-1.5 hover:bg-rose-50 text-rose-500 hover:text-rose-700 rounded-lg transition-colors cursor-pointer inline-block"
+                                        title="Delete this borrow history record"
                                       >
-                                        Return Book
+                                        <Trash2 className="h-3.5 w-3.5" />
                                       </button>
-                                      <button 
-                                        onClick={() => handleRenew(b.id)}
-                                        className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-900 text-white font-bold text-[10px] rounded-lg transition-colors cursor-pointer"
-                                      >
-                                        Renew
-                                      </button>
-                                    </div>
-                                  ) : (
-                                    <span className="text-slate-400 font-semibold italic text-[10px]">Settled</span>
-                                  )}
+                                    )}
+                                  </div>
                                 </td>
                               </tr>
                             );
@@ -1108,6 +1302,388 @@ export default function AdminDashboard({
           )}
         </div>
       </div>
+
+      {/* J. Active Borrowers Inspection Modal */}
+      {selectedBookForBorrowers && (
+        <div 
+          className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
+          onClick={() => setSelectedBookForBorrowers(null)}
+        >
+          <div 
+            className="bg-white rounded-2xl max-w-3xl w-full shadow-2xl border border-slate-200 overflow-hidden my-8"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="p-5 border-b border-slate-100 flex items-start justify-between bg-slate-50/50">
+              <div className="space-y-1">
+                <div className="flex items-center space-x-2">
+                  <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase bg-blue-100 text-blue-800">
+                    Active Borrowers
+                  </span>
+                  <span className="text-xs font-mono text-slate-400">ISBN: {selectedBookForBorrowers.isbn}</span>
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 leading-tight">
+                  {selectedBookForBorrowers.title}
+                </h3>
+                <p className="text-xs text-slate-500 font-medium">
+                  By {selectedBookForBorrowers.authorName} • {selectedBookForBorrowers.categoryName} • Shelf: <span className="font-mono font-bold text-slate-700">{selectedBookForBorrowers.shelfNumber || 'General'}</span>
+                </p>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setSelectedBookForBorrowers(null)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors cursor-pointer"
+                title="Close"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Inventory Metrics */}
+            <div className="grid grid-cols-3 divide-x divide-slate-100 border-b border-slate-100 bg-white p-4">
+              <div className="text-center px-2">
+                <p className="text-[10px] uppercase font-bold text-slate-400">Total Copies</p>
+                <p className="text-lg font-extrabold text-slate-800">{selectedBookForBorrowers.quantity}</p>
+              </div>
+              <div className="text-center px-2">
+                <p className="text-[10px] uppercase font-bold text-emerald-600">On Shelf (Available)</p>
+                <p className="text-lg font-extrabold text-emerald-700">{selectedBookForBorrowers.availableQuantity}</p>
+              </div>
+              <div className="text-center px-2">
+                <p className="text-[10px] uppercase font-bold text-blue-600">Currently Borrowed</p>
+                <p className="text-lg font-extrabold text-blue-700">
+                  {selectedBookForBorrowers.quantity - selectedBookForBorrowers.availableQuantity}
+                </p>
+              </div>
+            </div>
+
+            {/* Active Borrowers List */}
+            <div className="p-5 space-y-4 max-h-[55vh] overflow-y-auto">
+              {(() => {
+                const activeLoansForBook = borrows.filter(b => b.bookId === selectedBookForBorrowers.id && b.status !== 'returned');
+                const pastLoansForBook = borrows.filter(b => b.bookId === selectedBookForBorrowers.id && b.status === 'returned');
+                const today = new Date();
+                today.setHours(0,0,0,0);
+
+                return (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                        Current Active Borrowers ({activeLoansForBook.length})
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const title = selectedBookForBorrowers.title;
+                          setSelectedBookForBorrowers(null);
+                          setActiveTab('loans');
+                          setLoansSearch(title);
+                          setLoansFilter('borrowed');
+                        }}
+                        className="inline-flex items-center space-x-1 text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors cursor-pointer"
+                      >
+                        <span>Open in Issuance Ledger</span>
+                        <ArrowRight className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+
+                    {activeLoansForBook.length === 0 ? (
+                      <div className="p-6 bg-slate-50 border border-dashed border-slate-200 rounded-xl text-center space-y-1">
+                        <p className="text-xs font-bold text-slate-700">All copies are currently on shelf.</p>
+                        <p className="text-[11px] text-slate-400">No members or students currently have this book checked out.</p>
+                      </div>
+                    ) : (
+                      <div className="border border-slate-100 rounded-xl overflow-hidden shadow-xs">
+                        <table className="w-full text-xs text-left">
+                          <thead className="bg-slate-50 border-b border-slate-100 text-slate-400 font-bold">
+                            <tr>
+                              <th className="p-3">Borrow ID</th>
+                              <th className="p-3">Borrower Details</th>
+                              <th className="p-3">Borrowed On</th>
+                              <th className="p-3">Due Date</th>
+                              <th className="p-3">Days Remaining</th>
+                              <th className="p-3">Status</th>
+                              <th className="p-3 text-right">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {activeLoansForBook.map(loan => {
+                              const dueDate = new Date(loan.dueDate);
+                              dueDate.setHours(0,0,0,0);
+                              const diffTime = dueDate.getTime() - today.getTime();
+                              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                              const isOverdue = diffDays < 0;
+
+                              return (
+                                <tr key={loan.id} className="hover:bg-slate-50/50">
+                                  <td className="p-3 font-mono font-bold text-slate-500 text-[11px]">#{loan.id}</td>
+                                  <td className="p-3">
+                                    <p className="font-bold text-slate-800">{loan.userName}</p>
+                                    <p className="text-slate-400 text-[10px]">{loan.userEmail}</p>
+                                  </td>
+                                  <td className="p-3 text-slate-600">{loan.borrowDate}</td>
+                                  <td className="p-3 font-semibold text-slate-700">{loan.dueDate}</td>
+                                  <td className="p-3">
+                                    <span className={`font-bold ${isOverdue ? 'text-rose-600 animate-pulse' : 'text-slate-700'}`}>
+                                      {isOverdue ? `Overdue (${Math.abs(diffDays)}d)` : `${diffDays} days`}
+                                    </span>
+                                  </td>
+                                  <td className="p-3">
+                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                                      loan.status === 'overdue' ? 'bg-rose-50 text-rose-700 border border-rose-200' :
+                                      loan.status === 'renewed' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                                      'bg-amber-50 text-amber-700 border border-amber-200'
+                                    }`}>
+                                      {loan.status}
+                                    </span>
+                                  </td>
+                                  <td className="p-3 text-right">
+                                    <div className="flex items-center justify-end gap-1">
+                                      <button 
+                                        type="button"
+                                        onClick={() => handleReturn(loan.id)}
+                                        className="inline-flex items-center space-x-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] rounded-lg transition-colors cursor-pointer"
+                                        title="Check In / Return"
+                                      >
+                                        <CheckCircle2 className="h-3 w-3" />
+                                        <span>Return</span>
+                                      </button>
+                                      <button 
+                                        type="button"
+                                        onClick={() => handleRenew(loan.id)}
+                                        className="inline-flex items-center space-x-1 px-2 py-1 bg-slate-800 hover:bg-slate-900 text-white font-bold text-[10px] rounded-lg transition-colors cursor-pointer"
+                                        title="Renew"
+                                      >
+                                        <RotateCw className="h-3 w-3" />
+                                        <span>Renew</span>
+                                      </button>
+                                      {onDeleteBorrow && (
+                                        <button 
+                                          type="button"
+                                          onClick={() => setBorrowToDelete(loan)}
+                                          className="p-1 hover:bg-rose-50 text-rose-500 hover:text-rose-700 rounded-lg transition-colors cursor-pointer inline-block"
+                                          title="Delete this loan record"
+                                        >
+                                          <Trash2 className="h-3 w-3" />
+                                        </button>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+
+                    {/* Previous Borrowing History */}
+                    {pastLoansForBook.length > 0 && (
+                      <div className="pt-2 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                            Past Borrowing History ({pastLoansForBook.length} completed loans)
+                          </h4>
+                          {onClearHistory && (
+                            <button
+                              type="button"
+                              onClick={() => setShowClearHistoryModal(true)}
+                              className="text-[10px] font-bold text-rose-600 hover:text-rose-800 transition-colors cursor-pointer"
+                            >
+                              Purge Completed Records
+                            </button>
+                          )}
+                        </div>
+                        <div className="border border-slate-100 rounded-xl overflow-hidden">
+                          <table className="w-full text-[11px] text-left">
+                            <thead className="bg-slate-50 text-slate-400 font-bold border-b border-slate-100">
+                              <tr>
+                                <th className="p-2.5">Borrow ID</th>
+                                <th className="p-2.5">Member</th>
+                                <th className="p-2.5">Borrow Date</th>
+                                <th className="p-2.5">Returned On</th>
+                                <th className="p-2.5 text-right">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 text-slate-600">
+                              {pastLoansForBook.slice(0, 10).map(pl => (
+                                <tr key={pl.id} className="hover:bg-slate-50/50">
+                                  <td className="p-2.5 font-mono text-slate-400">#{pl.id}</td>
+                                  <td className="p-2.5 font-semibold text-slate-800">{pl.userName}</td>
+                                  <td className="p-2.5">{pl.borrowDate}</td>
+                                  <td className="p-2.5">{pl.returnDate || 'Returned'}</td>
+                                  <td className="p-2.5 text-right">
+                                    <div className="flex items-center justify-end gap-1.5">
+                                      <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-50 text-emerald-700">
+                                        Returned
+                                      </span>
+                                      {onDeleteBorrow && (
+                                        <button
+                                          type="button"
+                                          onClick={() => setBorrowToDelete(pl)}
+                                          className="p-1 hover:bg-rose-50 rounded text-rose-500 hover:text-rose-700 transition-colors cursor-pointer inline-block"
+                                          title="Delete this history record"
+                                        >
+                                          <Trash2 className="h-3 w-3" />
+                                        </button>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end">
+              <button 
+                type="button"
+                onClick={() => setSelectedBookForBorrowers(null)}
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+              >
+                Close Window
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal: Delete Book & Associated History */}
+      {bookToDelete && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-slate-100">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600 shrink-0">
+                <Trash2 className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Delete Book & History</h3>
+                <p className="text-xs text-slate-500">Permanently purge catalog and issuance records</p>
+              </div>
+            </div>
+            
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Are you sure you want to delete <strong className="text-slate-900">"{bookToDelete.title}"</strong>?
+              This will permanently delete this book entry and <strong className="text-rose-600">all associated borrowing records, active loans, reservations, fines, and historical ledger entries</strong>.
+            </p>
+
+            {borrows.filter(b => b.bookId === bookToDelete.id).length > 0 && (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-900">
+                ⚠️ <strong>Notice:</strong> This book has {borrows.filter(b => b.bookId === bookToDelete.id).length} related borrow history record(s). They will all be automatically deleted.
+              </div>
+            )}
+
+            <div className="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setBookToDelete(null)}
+                disabled={isDeleting}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteBook}
+                disabled={isDeleting}
+                className="inline-flex items-center space-x-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer disabled:opacity-50"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>{isDeleting ? 'Deleting...' : 'Yes, Delete Book & History'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal: Delete Single Borrow Record */}
+      {borrowToDelete && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-slate-100">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600 shrink-0">
+                <Trash2 className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Delete Borrow History Record</h3>
+                <p className="text-xs text-slate-500">Record #{borrowToDelete.id}</p>
+              </div>
+            </div>
+            
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Are you sure you want to permanently delete the borrowing history record for <strong className="text-slate-900">"{borrowToDelete.bookTitle}"</strong> issued to <strong className="text-slate-900">{borrowToDelete.userName}</strong>?
+            </p>
+
+            <div className="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setBorrowToDelete(null)}
+                disabled={isDeleting}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteBorrow}
+                disabled={isDeleting}
+                className="inline-flex items-center space-x-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer disabled:opacity-50"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>{isDeleting ? 'Deleting...' : 'Delete Record'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal: Purge All Completed History */}
+      {showClearHistoryModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-slate-100">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600 shrink-0">
+                <Trash2 className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Purge Completed History</h3>
+                <p className="text-xs text-slate-500">Remove all returned borrowing records</p>
+              </div>
+            </div>
+            
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Are you sure you want to permanently purge all <strong>{borrows.filter(b => b.status === 'returned').length}</strong> returned borrowing records? Active loans will remain intact.
+            </p>
+
+            <div className="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowClearHistoryModal(false)}
+                disabled={isDeleting}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmClearHistory}
+                disabled={isDeleting}
+                className="inline-flex items-center space-x-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer disabled:opacity-50"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>{isDeleting ? 'Purging...' : 'Purge All Returned History'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

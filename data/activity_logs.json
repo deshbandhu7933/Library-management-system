@@ -1,0 +1,50 @@
+[
+  {
+    "id": 7,
+    "userId": 1,
+    "userName": "Deshbandhu Admin",
+    "action": "User Login",
+    "details": "Deshbandhu logged into the system.",
+    "createdAt": "2026-09-06T14:18:18.075Z"
+  },
+  {
+    "id": 6,
+    "userId": 2,
+    "userName": "John Doe",
+    "action": "User Login",
+    "details": "John logged into the system.",
+    "createdAt": "2026-09-06T14:16:32.106Z"
+  },
+  {
+    "id": 5,
+    "userId": 1,
+    "userName": "Library Admin",
+    "action": "User Login",
+    "details": "Library logged into the system.",
+    "createdAt": "2026-09-06T14:05:38.015Z"
+  },
+  {
+    "id": 1,
+    "action": "User Registration",
+    "details": "Librarian/Admin (deshbandhu@gmail.com) registered successfully.",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": 2,
+    "action": "User Registration",
+    "details": "Student (student@library.com) registered successfully.",
+    "createdAt": "2026-01-15T00:00:00.000Z"
+  },
+  {
+    "id": 3,
+    "action": "Book Insertion",
+    "details": "Added new book: \"1984\" by George Orwell.",
+    "createdAt": "2026-01-02T10:05:00.000Z"
+  },
+  {
+    "id": 4,
+    "action": "Book Issued",
+    "details": "Book \"1984\" issued to John Doe (student@library.com).",
+    "createdAt": "2026-09-06T14:05:37.804Z"
+  }
+]

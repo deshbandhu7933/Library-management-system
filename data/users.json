@@ -1,0 +1,46 @@
+[
+  {
+    "id": 1,
+    "email": "deshbandhu@gmail.com",
+    "firstName": "Deshbandhu",
+    "lastName": "Admin",
+    "role": "admin",
+    "phone": "+1 (555) 0199",
+    "status": "active",
+    "profilePhoto": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": 2,
+    "email": "student@library.com",
+    "firstName": "John",
+    "lastName": "Doe",
+    "role": "student",
+    "phone": "+1 (555) 0122",
+    "status": "active",
+    "profilePhoto": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
+    "createdAt": "2026-01-15T00:00:00.000Z"
+  },
+  {
+    "id": 3,
+    "email": "alice@library.com",
+    "firstName": "Alice",
+    "lastName": "Smith",
+    "role": "student",
+    "phone": "+1 (555) 0144",
+    "status": "active",
+    "profilePhoto": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150",
+    "createdAt": "2026-02-01T00:00:00.000Z"
+  },
+  {
+    "id": 4,
+    "email": "bob@library.com",
+    "firstName": "Bob",
+    "lastName": "Johnson",
+    "role": "student",
+    "phone": "+1 (555) 0155",
+    "status": "inactive",
+    "profilePhoto": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150",
+    "createdAt": "2026-02-10T00:00:00.000Z"
+  }
+]

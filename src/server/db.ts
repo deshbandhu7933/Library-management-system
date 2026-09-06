@@ -52,8 +52,8 @@ const seedUsers = (): User[] => {
   return [
     {
       id: 1,
-      email: 'admin@library.com',
-      firstName: 'Library',
+      email: 'deshbandhu@gmail.com',
+      firstName: 'Deshbandhu',
       lastName: 'Admin',
       role: UserRole.ADMIN,
       phone: '+1 (555) 0199',
@@ -1053,7 +1053,7 @@ const seedContacts = (): ContactSubmission[] => [
 ];
 
 const seedActivityLogs = (): ActivityLog[] => [
-  { id: 1, action: 'User Registration', details: 'Librarian/Admin (admin@library.com) registered successfully.', createdAt: new Date('2026-01-01T00:00:00Z').toISOString() },
+  { id: 1, action: 'User Registration', details: 'Librarian/Admin (deshbandhu@gmail.com) registered successfully.', createdAt: new Date('2026-01-01T00:00:00Z').toISOString() },
   { id: 2, action: 'User Registration', details: 'Student (student@library.com) registered successfully.', createdAt: new Date('2026-01-15T00:00:00Z').toISOString() },
   { id: 3, action: 'Book Insertion', details: 'Added new book: "1984" by George Orwell.', createdAt: new Date('2026-01-02T10:05:00Z').toISOString() },
   { id: 4, action: 'Book Issued', details: 'Book "1984" issued to John Doe (student@library.com).', createdAt: new Date().toISOString() }

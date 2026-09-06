@@ -546,20 +546,105 @@ export async function deleteBook(req: AuthenticatedRequest, res: Response) {
       return res.status(404).json({ message: 'Book not found' });
     }
 
-    // Check if book is currently on loan
-    const borrows = borrowDB.getAll();
-    const activeBorrows = borrows.filter(b => b.bookId === id && (b.status === 'borrowed' || b.status === 'renewed' || b.status === 'overdue'));
+    // Cascade delete all history associated with this book:
+    // 1. Delete all borrow records / loan history
+    const allBorrows = borrowDB.getAll();
+    const deletedBorrows = allBorrows.filter(b => b.bookId === id);
+    const updatedBorrows = allBorrows.filter(b => b.bookId !== id);
+    borrowDB.save(updatedBorrows);
 
-    if (activeBorrows.length > 0) {
-      return res.status(400).json({ message: 'Cannot delete book: Book has active borrows pending return.' });
-    }
+    // 2. Delete all reservations for this book
+    const allReservations = reservationsDB.getAll();
+    const updatedReservations = allReservations.filter(r => r.bookId !== id);
+    reservationsDB.save(updatedReservations);
 
+    // 3. Delete all fines associated with this book or its borrows
+    const deletedBorrowIds = new Set(deletedBorrows.map(b => b.id));
+    const allFines = finesDB.getAll();
+    const updatedFines = allFines.filter(f => !deletedBorrowIds.has(f.borrowRecordId) && f.bookTitle !== book.title);
+    finesDB.save(updatedFines);
+
+    // 4. Delete all reviews for this book
+    const allReviews = reviewsDB.getAll();
+    const updatedReviews = allReviews.filter(r => r.bookId !== id);
+    reviewsDB.save(updatedReviews);
+
+    // 5. Delete all wishlist items for this book
+    const allWishlist = wishlistDB.getAll();
+    const updatedWishlist = allWishlist.filter(w => w.bookId !== id);
+    wishlistDB.save(updatedWishlist);
+
+    // 6. Delete the book from catalog
     const updatedBooks = books.filter(b => b.id !== id);
     booksDB.save(updatedBooks);
 
-    logActivity(req.user?.id, 'Book Deleted', `Deleted "${book.title}" from catalog.`);
+    logActivity(req.user?.id, 'Book & History Deleted', `Deleted "${book.title}" (ID: ${id}) along with ${deletedBorrows.length} borrow history record(s).`);
 
-    return res.json({ message: 'Book deleted successfully' });
+    return res.json({ 
+      message: 'Book and its associated history deleted successfully.',
+      deletedBookId: id,
+      deletedBorrowsCount: deletedBorrows.length
+    });
+  } catch (error: any) {
+    return res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  }
+}
+
+export async function deleteBorrowRecord(req: AuthenticatedRequest, res: Response) {
+  try {
+    const id = Number(req.params.id);
+    const borrows = borrowDB.getAll();
+    const record = borrows.find(b => b.id === id);
+
+    if (!record) {
+      return res.status(404).json({ message: 'Borrow record not found' });
+    }
+
+    // If active, restore 1 copy to shelf
+    if (record.status !== 'returned') {
+      const books = booksDB.getAll();
+      const bookIndex = books.findIndex(b => b.id === record.bookId);
+      if (bookIndex !== -1) {
+        books[bookIndex].availableQuantity = Math.min(books[bookIndex].quantity, books[bookIndex].availableQuantity + 1);
+        booksDB.save(books);
+      }
+    }
+
+    const updatedBorrows = borrows.filter(b => b.id !== id);
+    borrowDB.save(updatedBorrows);
+
+    // Also delete any fine associated with this borrow
+    const fines = finesDB.getAll();
+    const updatedFines = fines.filter(f => f.borrowRecordId !== id);
+    finesDB.save(updatedFines);
+
+    logActivity(req.user?.id, 'Borrow Record Deleted', `Deleted borrow history record #${id} for "${record.bookTitle}".`);
+
+    return res.json({ message: 'Borrow record deleted successfully', deletedId: id });
+  } catch (error: any) {
+    return res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  }
+}
+
+export async function clearReturnedHistory(req: AuthenticatedRequest, res: Response) {
+  try {
+    const borrows = borrowDB.getAll();
+    const returnedBorrows = borrows.filter(b => b.status === 'returned');
+    const returnedIds = new Set(returnedBorrows.map(b => b.id));
+    const updatedBorrows = borrows.filter(b => b.status !== 'returned');
+    borrowDB.save(updatedBorrows);
+
+    // Also clean up any settled fines that belonged to returned loans
+    const fines = finesDB.getAll();
+    const updatedFines = fines.filter(f => !(f.borrowRecordId && returnedIds.has(f.borrowRecordId) && f.status === 'paid'));
+    finesDB.save(updatedFines);
+
+    logActivity(req.user?.id, 'Cleared Returned History', `Purged ${returnedBorrows.length} completed borrowing history records.`);
+
+    return res.json({ 
+      message: `Successfully cleared ${returnedBorrows.length} completed history records.`,
+      clearedCount: returnedBorrows.length
+    });
   } catch (error: any) {
     return res.status(500).json({ message: 'Internal Server Error', error: error.message });
   }

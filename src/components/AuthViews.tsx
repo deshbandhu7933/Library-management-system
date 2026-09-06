@@ -3,20 +3,31 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
-import { Mail, Lock, User, Phone, ShieldAlert, Sparkles, BookOpen, Library, GraduationCap, Award } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { 
+  Mail, Lock, User, Phone, ShieldAlert, Sparkles, BookOpen, 
+  Library, GraduationCap, ShieldCheck, ArrowRight, Check 
+} from 'lucide-react';
 
 interface LoginProps {
   onLogin: (email: string, pass: string) => Promise<void>;
   onNavigate: (view: string) => void;
   toast: (msg: string, type?: 'success' | 'error') => void;
+  initialMode?: 'student' | 'admin';
 }
 
-export function LoginView({ onLogin, onNavigate, toast }: LoginProps) {
+export function LoginView({ onLogin, onNavigate, toast, initialMode = 'student' }: LoginProps) {
+  const [loginMode, setLoginMode] = useState<'student' | 'admin'>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
+
+  useEffect(() => {
+    if (initialMode) {
+      setLoginMode(initialMode);
+    }
+  }, [initialMode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,14 +53,68 @@ export function LoginView({ onLogin, onNavigate, toast }: LoginProps) {
       <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-96 h-96 rounded-full bg-amber-500/5 blur-3xl" />
 
       <div className="max-w-md w-full bg-white rounded-2xl border border-slate-200 shadow-xl p-8 relative z-10 space-y-6">
-        <div className="text-center space-y-1.5">
-          <div className="inline-flex p-3 bg-blue-600 rounded-2xl text-white shadow-lg shadow-blue-500/20 mb-2">
-            <Library className="h-6 w-6" />
-          </div>
-          <h2 className="text-2xl font-extrabold text-slate-800 tracking-tight">Welcome Back</h2>
-          <p className="text-slate-400 text-xs">Enter credentials to unlock your campus workstation</p>
+        
+        {/* Role Switcher: Member vs Admin */}
+        <div className="grid grid-cols-2 p-1 bg-slate-100/90 rounded-xl border border-slate-200/60 shadow-inner">
+          <button
+            type="button"
+            onClick={() => {
+              setLoginMode('student');
+              setErr('');
+            }}
+            className={`py-2 px-3 text-xs font-bold rounded-lg flex items-center justify-center space-x-1.5 transition-all cursor-pointer ${
+              loginMode === 'student'
+                ? 'bg-white text-blue-700 shadow-sm'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+            id="tab-student-login"
+          >
+            <GraduationCap className="h-4 w-4" />
+            <span>Student Login</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setLoginMode('admin');
+              setErr('');
+            }}
+            className={`py-2 px-3 text-xs font-bold rounded-lg flex items-center justify-center space-x-1.5 transition-all cursor-pointer ${
+              loginMode === 'admin'
+                ? 'bg-slate-900 text-amber-400 shadow-sm'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+            id="tab-admin-login"
+          >
+            <ShieldCheck className="h-4 w-4" />
+            <span>Login as Admin</span>
+          </button>
         </div>
 
+        {/* Dynamic Header based on selected login mode */}
+        {loginMode === 'admin' ? (
+          <div className="text-center space-y-1.5">
+            <div className="inline-flex p-3 bg-slate-900 rounded-2xl text-amber-400 shadow-lg shadow-slate-900/20 mb-1 ring-4 ring-amber-400/20">
+              <ShieldCheck className="h-6 w-6" />
+            </div>
+            <div className="flex items-center justify-center space-x-1.5">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-100 text-amber-900 border border-amber-300/60">
+                Staff & Librarian Portal
+              </span>
+            </div>
+            <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">Admin Sign In</h2>
+            <p className="text-slate-500 text-xs">Enter administrative credentials to manage library inventory, borrowers, and catalogs</p>
+          </div>
+        ) : (
+          <div className="text-center space-y-1.5">
+            <div className="inline-flex p-3 bg-blue-600 rounded-2xl text-white shadow-lg shadow-blue-500/20 mb-1">
+              <Library className="h-6 w-6" />
+            </div>
+            <h2 className="text-2xl font-extrabold text-slate-800 tracking-tight">Welcome Back</h2>
+            <p className="text-slate-400 text-xs">Enter credentials to unlock your campus library workstation</p>
+          </div>
+        )}
+
+        {/* Error Alert */}
         {err && (
           <div className="p-3.5 bg-rose-50 border border-rose-100 text-rose-700 text-xs font-semibold rounded-xl flex items-center space-x-2">
             <ShieldAlert className="h-4.5 w-4.5 flex-shrink-0" />
@@ -59,7 +124,9 @@ export function LoginView({ onLogin, onNavigate, toast }: LoginProps) {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-700">Email Address</label>
+            <label className="text-xs font-bold text-slate-700">
+              {loginMode === 'admin' ? 'Admin Email Address' : 'Email Address'}
+            </label>
             <div className="relative">
               <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <input
@@ -67,8 +134,9 @@ export function LoginView({ onLogin, onNavigate, toast }: LoginProps) {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 className="w-full bg-slate-50/50 border border-slate-200 hover:border-slate-300 focus:border-blue-500 rounded-xl pl-11 pr-4 py-2.5 text-sm outline-none focus:ring-4 focus:ring-blue-500/5 transition-all"
-                placeholder="student@library.com"
+                placeholder={loginMode === 'admin' ? 'admin@example.com' : 'student@example.com'}
                 required
+                id="login-email-input"
               />
             </div>
           </div>
@@ -79,7 +147,7 @@ export function LoginView({ onLogin, onNavigate, toast }: LoginProps) {
               <button
                 type="button"
                 onClick={() => onNavigate('forgot-password')}
-                className="text-xs font-semibold text-blue-600 hover:text-blue-700 focus:outline-none"
+                className="text-xs font-semibold text-blue-600 hover:text-blue-700 focus:outline-none cursor-pointer"
               >
                 Forgot Password?
               </button>
@@ -93,6 +161,7 @@ export function LoginView({ onLogin, onNavigate, toast }: LoginProps) {
                 className="w-full bg-slate-50/50 border border-slate-200 hover:border-slate-300 focus:border-blue-500 rounded-xl pl-11 pr-4 py-2.5 text-sm outline-none focus:ring-4 focus:ring-blue-500/5 transition-all"
                 placeholder="••••••••"
                 required
+                id="login-password-input"
               />
             </div>
           </div>
@@ -100,23 +169,67 @@ export function LoginView({ onLogin, onNavigate, toast }: LoginProps) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm py-2.5 px-4 rounded-xl transition-colors shadow-md shadow-blue-500/10 focus:outline-none flex items-center justify-center space-x-2 disabled:opacity-50 cursor-pointer"
+            className={`w-full font-bold text-sm py-2.5 px-4 rounded-xl transition-all shadow-md focus:outline-none flex items-center justify-center space-x-2 disabled:opacity-50 cursor-pointer ${
+              loginMode === 'admin'
+                ? 'bg-slate-900 hover:bg-slate-800 text-white shadow-slate-900/10 hover:shadow-slate-900/20'
+                : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/10 hover:shadow-blue-500/20'
+            }`}
             id="login-submit-btn"
           >
-            <span>{loading ? 'Securing Connection...' : 'Secure Log In'}</span>
+            {loginMode === 'admin' ? (
+              <>
+                <ShieldCheck className="h-4 w-4 text-amber-400" />
+                <span>{loading ? 'Authenticating Admin...' : 'Log In as Admin'}</span>
+              </>
+            ) : (
+              <span>{loading ? 'Securing Connection...' : 'Secure Log In'}</span>
+            )}
           </button>
         </form>
 
-        <div className="text-center pt-2">
-          <p className="text-xs text-slate-400">
-            Don't have a library account?{' '}
-            <button
-              onClick={() => onNavigate('register')}
-              className="font-bold text-blue-600 hover:text-blue-700"
-            >
-              Sign Up Now
-            </button>
-          </p>
+        {/* Dynamic Footer Options */}
+        <div className="pt-3 border-t border-slate-100 flex flex-col items-center space-y-3">
+          {loginMode === 'admin' ? (
+            <p className="text-xs text-slate-500">
+              Are you a student or faculty member?{' '}
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginMode('student');
+                  setErr('');
+                }}
+                className="font-bold text-blue-600 hover:text-blue-700 cursor-pointer"
+                id="switch-to-student-btn"
+              >
+                Switch to Member Login
+              </button>
+            </p>
+          ) : (
+            <>
+              <p className="text-xs text-slate-400">
+                Don't have a library account?{' '}
+                <button
+                  onClick={() => onNavigate('register')}
+                  className="font-bold text-blue-600 hover:text-blue-700 cursor-pointer"
+                  id="login-signup-link"
+                >
+                  Sign Up Now
+                </button>
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginMode('admin');
+                  setErr('');
+                }}
+                className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200/80 text-slate-800 text-xs font-bold rounded-xl transition-colors cursor-pointer border border-slate-200"
+                id="switch-to-admin-btn"
+              >
+                <ShieldCheck className="h-3.5 w-3.5 text-amber-600" />
+                <span>Are you an Admin? Login as Admin</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -130,23 +243,11 @@ interface RegisterProps {
 }
 
 export function RegisterView({ onRegister, onNavigate, toast }: RegisterProps) {
-  const [role, setRole] = useState<'student' | 'teacher'>('student');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
-
-  // Student specific enrollment fields
-  const [studentId, setStudentId] = useState('');
-  const [major, setMajor] = useState('');
-  const [gradeLevel, setGradeLevel] = useState('');
-
-  // Teacher specific enrollment fields
-  const [teacherId, setTeacherId] = useState('');
-  const [department, setDepartment] = useState('');
-  const [officeNumber, setOfficeNumber] = useState('');
-  const [designation, setDesignation] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
@@ -165,16 +266,6 @@ export function RegisterView({ onRegister, onNavigate, toast }: RegisterProps) {
       return;
     }
 
-    // Role-specific validation
-    if (role === 'student' && !studentId) {
-      setErr('Student ID is required for student enrollment.');
-      return;
-    }
-    if (role === 'teacher' && !teacherId) {
-      setErr('Teacher/Employee ID is required for teacher enrollment.');
-      return;
-    }
-
     setLoading(true);
     try {
       const payload = {
@@ -183,8 +274,7 @@ export function RegisterView({ onRegister, onNavigate, toast }: RegisterProps) {
         email,
         phone,
         password,
-        role,
-        ...(role === 'student' ? { studentId, major, gradeLevel } : { teacherId, department, officeNumber, designation })
+        role: 'student'
       };
 
       await onRegister(payload);
@@ -205,38 +295,10 @@ export function RegisterView({ onRegister, onNavigate, toast }: RegisterProps) {
       <div className="max-w-md w-full bg-white rounded-2xl border border-slate-200 shadow-xl p-8 relative z-10 space-y-6">
         <div className="text-center space-y-1.5">
           <div className="inline-flex p-3 bg-blue-600 rounded-2xl text-white shadow-lg shadow-blue-500/20 mb-2">
-            <BookOpen className="h-6 w-6" />
+            <GraduationCap className="h-6 w-6" />
           </div>
-          <h2 className="text-2xl font-extrabold text-slate-800 tracking-tight">Member Enrollment</h2>
-          <p className="text-slate-400 text-xs">Create your professional campus library passport</p>
-        </div>
-
-        {/* Role Selection Tab */}
-        <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl">
-          <button
-            type="button"
-            onClick={() => { setRole('student'); setErr(''); }}
-            className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center space-x-2 cursor-pointer ${
-              role === 'student'
-                ? 'bg-white text-blue-600 shadow-sm border border-slate-200/50'
-                : 'text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <GraduationCap className="h-4 w-4" />
-            <span>Student</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => { setRole('teacher'); setErr(''); }}
-            className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center space-x-2 cursor-pointer ${
-              role === 'teacher'
-                ? 'bg-white text-blue-600 shadow-sm border border-slate-200/50'
-                : 'text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <Award className="h-4 w-4" />
-            <span>Teacher</span>
-          </button>
+          <h2 className="text-2xl font-extrabold text-slate-800 tracking-tight">Student Registration</h2>
+          <p className="text-slate-400 text-xs">Create your student library account</p>
         </div>
 
         {err && (
@@ -281,7 +343,7 @@ export function RegisterView({ onRegister, onNavigate, toast }: RegisterProps) {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 className="w-full bg-slate-50/50 border border-slate-200 focus:border-blue-500 rounded-xl pl-11 pr-4 py-2 text-sm outline-none focus:ring-4 focus:ring-blue-500/5 transition-all"
-                placeholder={role === 'student' ? 'student@campus.edu' : 'teacher@campus.edu'}
+                placeholder="student@campus.edu"
                 required
               />
             </div>
@@ -300,112 +362,6 @@ export function RegisterView({ onRegister, onNavigate, toast }: RegisterProps) {
               />
             </div>
           </div>
-
-          {/* Conditional Student Fields */}
-          {role === 'student' && (
-            <div className="p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50 space-y-3.5">
-              <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider flex items-center space-x-1.5">
-                <GraduationCap className="h-3.5 w-3.5" />
-                <span>Student Academic Enrollment</span>
-              </p>
-              
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700">Student ID / Matric Code *</label>
-                <input
-                  type="text"
-                  value={studentId}
-                  onChange={e => setStudentId(e.target.value)}
-                  className="w-full bg-white border border-slate-200 focus:border-blue-500 rounded-xl px-3.5 py-2 text-sm outline-none"
-                  placeholder="STU-2026-9481"
-                  required={role === 'student'}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700">Major / Subject</label>
-                  <input
-                    type="text"
-                    value={major}
-                    onChange={e => setMajor(e.target.value)}
-                    className="w-full bg-white border border-slate-200 focus:border-blue-500 rounded-xl px-3 py-2 text-xs outline-none"
-                    placeholder="Computer Science"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700">Grade Level / Term</label>
-                  <select
-                    value={gradeLevel}
-                    onChange={e => setGradeLevel(e.target.value)}
-                    className="w-full bg-white border border-slate-200 focus:border-blue-500 rounded-xl px-2 py-2 text-xs outline-none"
-                  >
-                    <option value="">Select level...</option>
-                    <option value="Freshman">Freshman (Yr 1)</option>
-                    <option value="Sophomore">Sophomore (Yr 2)</option>
-                    <option value="Junior">Junior (Yr 3)</option>
-                    <option value="Senior">Senior (Yr 4)</option>
-                    <option value="Graduate">Graduate (MSc/PhD)</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Conditional Teacher Fields */}
-          {role === 'teacher' && (
-            <div className="p-4 bg-amber-50/50 rounded-2xl border border-amber-100/50 space-y-3.5">
-              <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wider flex items-center space-x-1.5">
-                <Award className="h-3.5 w-3.5" />
-                <span>Faculty/Staff Credentials</span>
-              </p>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700">Employee ID / Teacher Code *</label>
-                <input
-                  type="text"
-                  value={teacherId}
-                  onChange={e => setTeacherId(e.target.value)}
-                  className="w-full bg-white border border-slate-200 focus:border-blue-500 rounded-xl px-3.5 py-2 text-sm outline-none"
-                  placeholder="FAC-9912-2026"
-                  required={role === 'teacher'}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700">Department</label>
-                  <input
-                    type="text"
-                    value={department}
-                    onChange={e => setDepartment(e.target.value)}
-                    className="w-full bg-white border border-slate-200 focus:border-blue-500 rounded-xl px-3 py-2 text-xs outline-none"
-                    placeholder="Engineering"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700">Academic Title</label>
-                  <input
-                    type="text"
-                    value={designation}
-                    onChange={e => setDesignation(e.target.value)}
-                    className="w-full bg-white border border-slate-200 focus:border-blue-500 rounded-xl px-3 py-2 text-xs outline-none"
-                    placeholder="Assistant Professor"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700">Office Location / Desk Number</label>
-                <input
-                  type="text"
-                  value={officeNumber}
-                  onChange={e => setOfficeNumber(e.target.value)}
-                  className="w-full bg-white border border-slate-200 focus:border-blue-500 rounded-xl px-3.5 py-2 text-sm outline-none"
-                  placeholder="Tech Annex, Room 404"
-                />
-              </div>
-            </div>
-          )}
 
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-700">Password *</label>
@@ -428,7 +384,7 @@ export function RegisterView({ onRegister, onNavigate, toast }: RegisterProps) {
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm py-2.5 px-4 rounded-xl transition-colors shadow-md shadow-blue-500/10 focus:outline-none flex items-center justify-center space-x-2 disabled:opacity-50 cursor-pointer"
             id="register-submit-btn"
           >
-            <span>{loading ? 'Creating Passport...' : 'Enroll Account'}</span>
+            <span>{loading ? 'Registering Account...' : 'Register Student Account'}</span>
           </button>
         </form>
 

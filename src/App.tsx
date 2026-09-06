@@ -77,6 +77,22 @@ export default function App() {
     syncCoreData().finally(() => setAppLoading(false));
   }, []);
 
+  // Helper: Safely fetch and parse JSON responses, avoiding HTML unexpected token errors
+  const fetchJsonSafe = async (url: string, headers: HeadersInit) => {
+    try {
+      const res = await fetch(url, { headers });
+      if (!res.ok) return null;
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        return null;
+      }
+      return await res.json();
+    } catch (err) {
+      console.warn(`SafeFetch: Failed to parse JSON from ${url}:`, err);
+      return null;
+    }
+  };
+
   // 2. Load and Sync Core resources from Express REST APIs
   const syncCoreData = async () => {
     try {
@@ -87,55 +103,54 @@ export default function App() {
       }
 
       // Fetch books
-      const bRes = await fetch('/api/books', { headers });
-      if (bRes.ok) setBooks(await bRes.json());
+      const booksData = await fetchJsonSafe('/api/books', headers);
+      if (Array.isArray(booksData)) setBooks(booksData);
 
       // Fetch authors
-      const aRes = await fetch('/api/authors', { headers });
-      if (aRes.ok) setAuthors(await aRes.json());
+      const authorsData = await fetchJsonSafe('/api/authors', headers);
+      if (Array.isArray(authorsData)) setAuthors(authorsData);
 
       // Fetch categories
-      const cRes = await fetch('/api/categories', { headers });
-      if (cRes.ok) setCategories(await cRes.json());
+      const categoriesData = await fetchJsonSafe('/api/categories', headers);
+      if (Array.isArray(categoriesData)) setCategories(categoriesData);
 
       // Fetch publishers
-      const pRes = await fetch('/api/publishers', { headers });
-      if (pRes.ok) setPublishers(await pRes.json());
+      const publishersData = await fetchJsonSafe('/api/publishers', headers);
+      if (Array.isArray(publishersData)) setPublishers(publishersData);
 
       // Fetch borrows
-      const boRes = await fetch('/api/borrow', { headers });
-      if (boRes.ok) setBorrows(await boRes.json());
+      const borrowsData = await fetchJsonSafe('/api/borrow', headers);
+      if (Array.isArray(borrowsData)) setBorrows(borrowsData);
 
       // Fetch reservations
-      const rRes = await fetch('/api/reservations', { headers });
-      if (rRes.ok) setReservations(await rRes.json());
+      const reservationsData = await fetchJsonSafe('/api/reservations', headers);
+      if (Array.isArray(reservationsData)) setReservations(reservationsData);
 
       // Fetch fines
-      const fRes = await fetch('/api/fines', { headers });
-      if (fRes.ok) setFines(await fRes.json());
+      const finesData = await fetchJsonSafe('/api/fines', headers);
+      if (Array.isArray(finesData)) setFines(finesData);
 
       // If user is Admin, fetch system messages, logs, members
       if (user?.role === UserRole.ADMIN) {
-        const mRes = await fetch('/api/members', { headers });
-        if (mRes.ok) setMembers(await mRes.json());
+        const membersData = await fetchJsonSafe('/api/members', headers);
+        if (Array.isArray(membersData)) setMembers(membersData);
 
-        const msgRes = await fetch('/api/contact', { headers });
-        if (msgRes.ok) setMessages(await msgRes.json());
+        const contactsData = await fetchJsonSafe('/api/contacts', headers);
+        if (Array.isArray(contactsData)) setMessages(contactsData);
 
-        const lRes = await fetch('/api/logs', { headers });
-        if (lRes.ok) setLogs(await lRes.json());
+        const logsData = await fetchJsonSafe('/api/logs', headers);
+        if (Array.isArray(logsData)) setLogs(logsData);
       }
 
       // If user is Student or Teacher, fetch personal wishlist, notifications
       if (user?.role === UserRole.STUDENT || user?.role === UserRole.TEACHER) {
-        const wRes = await fetch('/api/wishlist', { headers });
-        if (wRes.ok) {
-          const list = await wRes.json();
-          setWishlistIds(list.map((item: any) => item.bookId));
+        const wishlistData = await fetchJsonSafe('/api/wishlist', headers);
+        if (Array.isArray(wishlistData)) {
+          setWishlistIds(wishlistData.map((item: any) => item.bookId));
         }
 
-        const nRes = await fetch('/api/notifications', { headers });
-        if (nRes.ok) setNotifications(await nRes.json());
+        const notificationsData = await fetchJsonSafe('/api/notifications', headers);
+        if (Array.isArray(notificationsData)) setNotifications(notificationsData);
       }
     } catch (err) {
       console.error('Error syncing backend resources:', err);
@@ -166,11 +181,12 @@ export default function App() {
     localStorage.setItem('user', JSON.stringify(data.user));
     setToken(data.token);
     setUser(data.user);
-    showToast(`Welcome back, ${data.user.firstName}! Session established.`, 'success');
     
     if (data.user.role === UserRole.ADMIN) {
+      showToast(`Welcome back, Administrator ${data.user.firstName}! Opening Admin Dashboard.`, 'success');
       setCurrentView('admin-dashboard');
     } else {
+      showToast(`Welcome back, ${data.user.firstName}! Opening Student Dashboard.`, 'success');
       setCurrentView('student-dashboard');
     }
   };
@@ -224,7 +240,7 @@ export default function App() {
 
   const handleReserveBook = async (bookId: number) => {
     try {
-      const res = await fetch('/api/reserve', {
+      const res = await fetch('/api/reservations', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -380,22 +396,56 @@ export default function App() {
   };
 
   const handleAdminDeleteBook = async (bookId: number) => {
-    if (confirm('Permanently delete this catalog book record?')) {
-      try {
-        const res = await fetch(`/api/books/${bookId}`, {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (res.ok) {
-          showToast('Book removed successfully.', 'success');
-          syncCoreData();
-        } else {
-          const data = await res.json();
-          showToast(data.error || 'Error deleting book.', 'error');
-        }
-      } catch (err) {
-        showToast('Error executing catalog purge.', 'error');
+    try {
+      const res = await fetch(`/api/books/${bookId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message || 'Book and associated history removed successfully.', 'success');
+        syncCoreData();
+      } else {
+        showToast(data.message || data.error || 'Error deleting book.', 'error');
       }
+    } catch (err) {
+      showToast('Error executing catalog purge.', 'error');
+    }
+  };
+
+  const handleAdminDeleteBorrow = async (borrowId: number) => {
+    try {
+      const res = await fetch(`/api/borrows/${borrowId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message || 'Borrow history record deleted successfully.', 'success');
+        syncCoreData();
+      } else {
+        showToast(data.message || data.error || 'Error deleting borrow record.', 'error');
+      }
+    } catch (err) {
+      showToast('Error executing borrow record deletion.', 'error');
+    }
+  };
+
+  const handleAdminClearHistory = async () => {
+    try {
+      const res = await fetch('/api/borrows/history/clear', {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message || 'Completed borrowing history cleared successfully.', 'success');
+        syncCoreData();
+      } else {
+        showToast(data.message || data.error || 'Error clearing history.', 'error');
+      }
+    } catch (err) {
+      showToast('Error clearing borrowing history.', 'error');
     }
   };
 
@@ -597,7 +647,7 @@ export default function App() {
         {appLoading ? (
           <div className="min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center space-y-3">
             <div className="h-8 w-8 rounded-full border-4 border-slate-200 border-t-blue-600 animate-spin" />
-            <p className="text-xs font-bold text-slate-500 font-mono">Securing Aegis Cloud Run links...</p>
+            <p className="text-xs font-bold text-slate-500 font-mono">Securing BandhuLibrary Cloud Run links...</p>
           </div>
         ) : (
           <>
@@ -640,11 +690,12 @@ export default function App() {
               />
             )}
 
-            {currentView === 'login' && (
+            {(currentView === 'login' || currentView === 'admin-login') && (
               <LoginView 
                 onLogin={handleLoginSubmit} 
                 onNavigate={setCurrentView} 
                 toast={showToast} 
+                initialMode={currentView === 'admin-login' ? 'admin' : 'student'}
               />
             )}
 
@@ -705,6 +756,8 @@ export default function App() {
                 onCancelReservation={handleCancelReservation}
                 onWaiveFine={handleWaiveFine}
                 onCollectFine={handleCollectFine}
+                onDeleteBorrow={handleAdminDeleteBorrow}
+                onClearHistory={handleAdminClearHistory}
                 toast={showToast}
               />
             )}

@@ -72,6 +72,33 @@ export function authenticateToken(req: AuthenticatedRequest, res: Response, next
 }
 
 /**
+ * Optional authentication: attaches user if token is valid, but allows guest access
+ */
+export function optionalAuthenticateToken(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return next();
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, decoded: any) => {
+    if (!err && decoded) {
+      const users = usersDB.getAll();
+      const user = users.find(u => u.id === decoded.id);
+      if (user && user.status !== 'inactive') {
+        req.user = {
+          id: user.id,
+          email: user.email,
+          role: user.role
+        };
+      }
+    }
+    next();
+  });
+}
+
+/**
  * Authorize only Admin/Librarian roles
  */
 export function requireAdmin(req: AuthenticatedRequest, res: Response, next: NextFunction) {

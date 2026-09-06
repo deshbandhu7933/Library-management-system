@@ -57,7 +57,7 @@ export function ContactView({ onSubmitContact, toast }: ContactViewProps) {
             </div>
             <div>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Email Inquiry</p>
-              <p className="text-sm font-bold text-slate-800 mt-1">support@aegislibrary.com</p>
+              <p className="text-sm font-bold text-slate-800 mt-1">support@bandhulibrary.com</p>
               <p className="text-[11px] text-slate-400 mt-0.5">Response within 24 business hours</p>
             </div>
           </div>
@@ -170,17 +170,11 @@ export function AboutView() {
     { title: 'Automated Operations', desc: 'Utilizing modern digital tracking interfaces to manage borrow records, reservation queues, and library receipts.', icon: Clock }
   ];
 
-  const staff = [
-    { name: "Dr. Sarah Jenkins", role: "Chief Librarian & Curator", bio: "Ph.D. in Information Science from Columbia University. Over 15 years curating academic catalogs.", photo: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150" },
-    { name: "Arthur Pendelton", role: "Head of Catalog Management", bio: "Master of Archives Administration. Manages database referencing, shelf mapping, and item imports.", photo: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150" },
-    { name: "Meera Nair", role: "Member Support Desk Lead", bio: "B.A. in English Literature. Handles student loans, membership enrollments, and fine waivers.", photo: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150" }
-  ];
-
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-16">
       {/* Introduction */}
       <div className="text-center max-w-2xl mx-auto space-y-4">
-        <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight">About Aegis Library</h2>
+        <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight">About BandhuLibrary</h2>
         <p className="text-slate-400 text-xs sm:text-sm">Empowering campus research through state-of-the-art catalog tracking and seamless operation flows since 2012.</p>
       </div>
 
@@ -189,7 +183,7 @@ export function AboutView() {
         <div className="space-y-4">
           <h4 className="text-lg font-bold text-slate-800">Our Shared Mission</h4>
           <p className="text-slate-500 text-xs sm:text-sm leading-relaxed">
-            Aegis Library was founded on the principle that academic references should be completely fluid, organized, and effortlessly auditable. By replacing outdated paper ledger logs with an integrated full-stack relational management ecosystem, we allow students and administrators to focus on what matters most: academic excellence.
+            BandhuLibrary was founded on the principle that academic references should be completely fluid, organized, and effortlessly auditable. By replacing outdated paper ledger logs with an integrated full-stack relational management ecosystem, we allow students and administrators to focus on what matters most: academic excellence.
           </p>
           <p className="text-slate-500 text-xs sm:text-sm leading-relaxed">
             We actively coordinate with world-class publishing houses, university faculties, and technical bodies to procure rare research texts, computer coding textbooks, and classic anthologies.
@@ -230,34 +224,6 @@ export function AboutView() {
               </div>
             );
           })}
-        </div>
-      </div>
-
-      {/* Staff */}
-      <div className="space-y-8">
-        <div className="text-center">
-          <h3 className="text-xl font-extrabold text-slate-800 tracking-tight">Our Academic Staff</h3>
-          <p className="text-slate-400 text-xs font-medium">The dedicated professionals keeping Aegis operations running smoothly</p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {staff.map((st, i) => (
-            <div key={i} className="bg-white border border-slate-200/60 p-5 rounded-2xl shadow-sm flex flex-col items-center text-center space-y-3">
-              <img 
-                src={st.photo} 
-                alt={st.name} 
-                referrerPolicy="no-referrer"
-                className="h-16 w-16 rounded-full object-cover border-2 border-blue-100"
-              />
-              <div>
-                <p className="font-bold text-xs sm:text-sm text-slate-800">{st.name}</p>
-                <p className="text-[10px] text-blue-600 font-semibold uppercase mt-0.5">{st.role}</p>
-              </div>
-              <p className="text-slate-500 text-xs leading-relaxed mt-1">
-                {st.bio}
-              </p>
-            </div>
-          ))}
         </div>
       </div>
     </div>

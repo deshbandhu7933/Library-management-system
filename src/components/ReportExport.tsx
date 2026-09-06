@@ -64,7 +64,7 @@ export default function ReportExport({ borrows = [], fines = [], books = [] }: R
     printWindow.document.write(`
       <html>
         <head>
-          <title>Loan Receipt - Aegis Library</title>
+          <title>Loan Receipt - BandhuLibrary</title>
           <style>
             body { font-family: 'Courier New', Courier, monospace; color: #1e293b; padding: 30px; max-width: 400px; margin: 0 auto; border: 1px dashed #cbd5e1; }
             h2 { text-align: center; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; }
@@ -76,7 +76,7 @@ export default function ReportExport({ borrows = [], fines = [], books = [] }: R
           </style>
         </head>
         <body>
-          <h2>AEGIS LIBRARY</h2>
+          <h2>BANDHULIBRARY</h2>
           <p style="text-align: center; font-size: 11px;">University Campus Square, Block 12</p>
           <div class="divider"></div>
           <p><strong>Receipt ID:</strong> REC-BOR-${record.id}-${new Date().getFullYear()}</p>
@@ -97,7 +97,7 @@ export default function ReportExport({ borrows = [], fines = [], books = [] }: R
           <div class="barcode">||||| | |||| ||| ||||</div>
           <p style="text-align: center; font-size: 10px; margin-top: 5px; font-mono">CODE: ${record.id}009841</p>
           <div class="footer">
-            Thank you for using Aegis Library Services!<br>
+            Thank you for using BandhuLibrary Services!<br>
             Please handle books with care.
           </div>
           <script>

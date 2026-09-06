@@ -7,7 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   BookOpen, Bell, Menu, X, User as UserIcon, 
-  LogOut, Settings, ListFilter, Library, FileText 
+  LogOut, Settings, ListFilter, Library, FileText, ShieldCheck 
 } from 'lucide-react';
 import { User, Notification } from '../types.js';
 import { Avatar } from './Avatar.js';
@@ -71,7 +71,7 @@ export default function Navbar({
                 <Library className="h-5 w-5" />
               </div>
               <span className="font-extrabold text-lg tracking-tight text-slate-900">
-                Aegis<span className="text-blue-600">Library</span>
+                Bandhu<span className="text-blue-600">Library</span>
               </span>
             </button>
           </div>
@@ -195,14 +195,23 @@ export default function Navbar({
               <div className="flex items-center space-x-2 pl-4 border-l border-slate-200">
                 <button 
                   onClick={() => onNavigate('login')} 
-                  className="px-4 py-2 text-sm font-semibold text-slate-700 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors"
+                  className="px-3.5 py-2 text-sm font-semibold text-slate-700 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                   id="nav-login-btn"
                 >
                   Log In
                 </button>
                 <button 
+                  onClick={() => onNavigate('admin-login')} 
+                  className="inline-flex items-center space-x-1.5 px-3 py-2 text-sm font-semibold text-slate-800 hover:text-slate-950 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg transition-colors cursor-pointer"
+                  id="nav-admin-login-btn"
+                  title="Log In as Administrator"
+                >
+                  <ShieldCheck className="h-4 w-4 text-amber-600" />
+                  <span>Login as Admin</span>
+                </button>
+                <button 
                   onClick={() => onNavigate('register')} 
-                  className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-md shadow-blue-500/10 hover:shadow-blue-500/20"
+                  className="px-3.5 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-md shadow-blue-500/10 hover:shadow-blue-500/20 cursor-pointer"
                   id="nav-register-btn"
                 >
                   Sign Up
@@ -256,8 +265,16 @@ export default function Navbar({
                 </div>
               ) : (
                 <div className="pt-4 mt-4 border-t border-slate-200 flex flex-col space-y-2 px-4">
-                  <button onClick={() => onNavigate('login')} className="w-full px-4 py-2 text-center text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors">Log In</button>
-                  <button onClick={() => onNavigate('register')} className="w-full px-4 py-2 text-center text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">Sign Up</button>
+                  <button onClick={() => onNavigate('login')} className="w-full px-4 py-2 text-center text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer">
+                    Log In
+                  </button>
+                  <button onClick={() => onNavigate('admin-login')} className="w-full px-4 py-2 text-center text-sm font-semibold text-slate-800 bg-amber-50 hover:bg-amber-100 border border-amber-200/80 rounded-lg transition-colors flex items-center justify-center space-x-1.5 cursor-pointer">
+                    <ShieldCheck className="h-4 w-4 text-amber-600" />
+                    <span>Login as Admin</span>
+                  </button>
+                  <button onClick={() => onNavigate('register')} className="w-full px-4 py-2 text-center text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors cursor-pointer">
+                    Sign Up
+                  </button>
                 </div>
               )}
             </div>

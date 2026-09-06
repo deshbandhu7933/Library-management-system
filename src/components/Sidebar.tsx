@@ -93,7 +93,7 @@ export default function Sidebar({
 
       {/* Footer Branding Info */}
       <div className="p-4 border-t border-slate-800/80 bg-slate-950/20 text-center">
-        <p className="text-[10px] text-slate-500 font-medium">Aegis LMS • Version 2.0.0</p>
+        <p className="text-[10px] text-slate-500 font-medium">BandhuLibrary LMS • Version 2.0.0</p>
         <p className="text-[9px] text-slate-600 mt-1">UTC Connection Secured</p>
       </div>
     </div>

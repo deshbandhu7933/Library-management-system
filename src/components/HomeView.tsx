@@ -84,12 +84,12 @@ export function HomeView({
   ];
 
   const testimonials = [
-    { quote: "Aegis Library has completely transformed how I secure reference papers for my computer engineering thesis. Online reservations are seamless!", author: "Marcus Vance", role: "Junior CS Student" },
+    { quote: "BandhuLibrary has completely transformed how I secure reference papers for my computer engineering thesis. Online reservations are seamless!", author: "Marcus Vance", role: "Junior CS Student" },
     { quote: "Being able to immediately check borrow logs and print loan receipts from my personal panel is incredibly neat and saves heaps of administrative overhead.", author: "Elena Rostova", role: "Biochemistry Undergrad" }
   ];
 
   const faqs = [
-    { q: "How do I register for an Aegis Library account?", a: "Students can register directly using the SignUp button in the top navigation bar. Enter your campus details, and your account will be immediately activated." },
+    { q: "How do I register for a BandhuLibrary account?", a: "Students can register directly using the SignUp button in the top navigation bar. Enter your campus details, and your account will be immediately activated." },
     { q: "What is the borrowing duration limit?", a: "The standard borrowing term is 14 days. You can extend your term up to three times online from your Student Dashboard before the due date passes." },
     { q: "How are overdue penalties calculated?", a: "If a loan exceeds its due date, a fine of $1.00 per day accumulates until the physical book is returned to the library desk." },
     { q: "Can I reserve out of stock items?", a: "Yes! If a book is currently fully borrowed, clicking 'Reserve' places you in a queue. You will receive an immediate notification when a copy is checked back in." }
@@ -118,7 +118,7 @@ export function HomeView({
               <span className="text-blue-500">Knowledge Reservoirs</span>
             </h1>
             <p className="text-slate-400 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
-              Experience the state-of-the-art Aegis Library. Search detailed catalogs, reserve incoming copies, renew loans instantly, and audit transactions securely.
+              Experience the state-of-the-art BandhuLibrary. Search detailed catalogs, reserve incoming copies, renew loans instantly, and audit transactions securely.
             </p>
           </motion.div>
 
@@ -204,7 +204,7 @@ export function HomeView({
       <section className="bg-slate-100 py-16 px-4">
         <div className="max-w-7xl mx-auto space-y-12">
           <div className="text-center space-y-2">
-            <h2 className="text-2xl font-extrabold text-slate-800 tracking-tight">The Aegis Advantage</h2>
+            <h2 className="text-2xl font-extrabold text-slate-800 tracking-tight">The BandhuLibrary Advantage</h2>
             <p className="text-slate-400 text-xs max-w-lg mx-auto">Engineered to support high-performance learning and bulletproof academic tracking</p>
           </div>
 
@@ -349,16 +349,20 @@ export function HomeView({
 
       {/* 8. Footer */}
       <footer className="border-t border-slate-200 pt-10 text-center text-xs text-slate-400 space-y-4">
-        <div className="flex justify-center space-x-6">
-          <button onClick={() => onNavigate('home')} className="hover:text-slate-600">Home</button>
-          <button onClick={() => onNavigate('books-catalog')} className="hover:text-slate-600">Books Gallery</button>
-          <button onClick={() => onNavigate('about')} className="hover:text-slate-600">About Us</button>
-          <button onClick={() => onNavigate('contact')} className="hover:text-slate-600">Contact</button>
+        <div className="flex flex-wrap justify-center items-center gap-6">
+          <button onClick={() => onNavigate('home')} className="hover:text-slate-600 cursor-pointer">Home</button>
+          <button onClick={() => onNavigate('books-catalog')} className="hover:text-slate-600 cursor-pointer">Books Gallery</button>
+          <button onClick={() => onNavigate('about')} className="hover:text-slate-600 cursor-pointer">About Us</button>
+          <button onClick={() => onNavigate('contact')} className="hover:text-slate-600 cursor-pointer">Contact</button>
+          <button onClick={() => onNavigate('admin-login')} className="text-slate-600 hover:text-slate-900 font-semibold inline-flex items-center space-x-1 cursor-pointer" id="footer-admin-login-btn">
+            <ShieldCheck className="h-3.5 w-3.5 text-amber-600" />
+            <span>Admin Portal Login</span>
+          </button>
         </div>
         <p className="max-w-md mx-auto text-[11px] leading-relaxed">
-          Aegis Library Services is licensed under Apache-2.0. High-performance campus book tracking system, secure JWT session management, automatic fine ledger sync, and print integrations.
+          BandhuLibrary Services is licensed under Apache-2.0. High-performance campus book tracking system, secure JWT session management, automatic fine ledger sync, and print integrations.
         </p>
-        <p className="text-[10px]">© {new Date().getFullYear()} Aegis LMS. All rights reserved.</p>
+        <p className="text-[10px]">© {new Date().getFullYear()} BandhuLibrary LMS. All rights reserved.</p>
       </footer>
     </div>
   );
